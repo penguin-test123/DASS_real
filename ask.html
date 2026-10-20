@@ -6,6 +6,24 @@
 <title>問答｜年齡與憂鬱、焦慮、壓力的關係</title>
 <link rel="stylesheet" href="style.css">
 <style>
+  .ask-box label{display:block;margin-bottom:8px;font-weight:600}
+  .ask-box textarea{display:block;width:100%;font:inherit;color:var(--text);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;resize:vertical}
+  .ask-box button{margin-top:10px;font:inherit;border:1px solid var(--text);background:var(--text);color:var(--card);border-radius:8px;padding:8px 20px;cursor:pointer}
+  .ask-box button:disabled{opacity:.6;cursor:wait}
+  #answer{margin-top:14px;padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--card);white-space:pre-wrap;word-break:break-word;min-height:1.5em}
+  #answer:empty{display:none}
+  #answer.err{border-color:#b42318;color:#b42318}
+  .qa{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px}
+  .qa-label{display:block;font-weight:600;margin-bottom:8px}
+  .qa textarea{width:100%;font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;resize:vertical}
+  .qa-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin-top:10px}
+  .qa button{font:inherit;border:1px solid var(--text);background:var(--text);color:var(--card);border-radius:8px;padding:8px 22px;cursor:pointer}
+  .qa button:disabled{opacity:.6;cursor:wait}
+  .qa-hint{color:var(--muted);font-size:.85rem}
+  .qa-answer{margin-top:14px;white-space:pre-wrap;word-break:break-word}
+  .qa-answer:empty{display:none}
+  .qa-answer.err{color:#b42318}
+  .qa-answer.wait{color:var(--muted)}
   .test-box{margin-top:18px}
   .test-box button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:8px;padding:8px 16px;cursor:pointer}
   .test-box button:disabled{opacity:.6;cursor:wait}
@@ -22,7 +40,12 @@
 </header>
 <main class="wrap">
   <h1>問答</h1>
-  <div class="soon"><b>即將推出</b><span>此區塊預留給問答功能，目前尚未開放。</span></div>
+  <div class="ask-box">
+    <label for="question">針對摘要表提問（例如：哪個年齡層的人數最多？）</label>
+    <textarea id="question" rows="3" maxlength="2000" placeholder="請輸入問題"></textarea>
+    <button type="button" id="sendBtn">送出</button>
+    <div id="answer" aria-live="polite"></div>
+  </div>
   <div class="test-box">
     <button type="button" id="testBtn">測試連線</button>
     <pre id="testOut" aria-live="polite"></pre>
@@ -66,6 +89,84 @@ btn.addEventListener("click", async () => {
     out.textContent = "失敗：無法連線到後端（" + e.message + "）。請確認網址正確、Worker 已部署，且網路正常。";
   } finally {
     btn.disabled = false;
+  }
+});
+
+const questionEl = document.getElementById("question");
+const sendBtn = document.getElementById("sendBtn");
+const answerEl = document.getElementById("answer");
+
+async function sendQuestion() {
+  const question = questionEl.value.trim();
+  if (!question) {
+    answerEl.className = "err";
+    answerEl.textContent = "請先輸入問題。";
+    return;
+  }
+  sendBtn.disabled = true;
+  answerEl.className = "";
+  answerEl.textContent = "回答中…";
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "ask", question })
+    });
+    let data = null;
+    try { data = await res.json(); } catch (e) {}
+    if (res.ok && data && data.ok) {
+      answerEl.textContent = data.answer;
+    } else {
+      answerEl.className = "err";
+      answerEl.textContent = "失敗：" + (data && data.error ? data.error : "後端回傳了無法辨識的內容（HTTP " + res.status + "）。");
+    }
+  } catch (e) {
+    answerEl.className = "err";
+    answerEl.textContent = "失敗：無法連線到後端（" + e.message + "）。請確認網址正確、Worker 已部署，且網路正常。";
+  } finally {
+    sendBtn.disabled = false;
+  }
+}
+
+sendBtn.addEventListener("click", sendQuestion);
+questionEl.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") sendQuestion();
+});
+
+const askBtn = document.getElementById("askBtn");
+const questionBox = document.getElementById("question");
+const answerBox = document.getElementById("answer");
+
+askBtn.addEventListener("click", async () => {
+  const question = questionBox.value.trim();
+  if (!question) {
+    answerBox.className = "qa-answer err";
+    answerBox.textContent = "請先輸入問題。";
+    return;
+  }
+  askBtn.disabled = true;
+  answerBox.className = "qa-answer wait";
+  answerBox.textContent = "回答中…";
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "ask", question })
+    });
+    let data = null;
+    try { data = await res.json(); } catch (e) {}
+    if (res.ok && data && data.ok) {
+      answerBox.className = "qa-answer";
+      answerBox.textContent = data.answer;
+    } else {
+      answerBox.className = "qa-answer err";
+      answerBox.textContent = "失敗：" + (data && data.error ? data.error : "後端回傳了無法辨識的內容（HTTP " + res.status + "）。");
+    }
+  } catch (e) {
+    answerBox.className = "qa-answer err";
+    answerBox.textContent = "失敗：無法連線到後端（" + e.message + "）。請確認網址正確、Worker 已部署，且網路正常。";
+  } finally {
+    askBtn.disabled = false;
   }
 });
 
