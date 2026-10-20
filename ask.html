@@ -27,6 +27,10 @@
     <button type="button" id="testBtn">測試連線</button>
     <pre id="testOut" aria-live="polite"></pre>
   </div>
+  <div class="test-box">
+    <button type="button" id="geminiBtn">測試 Gemini</button>
+    <pre id="geminiOut" aria-live="polite"></pre>
+  </div>
 </main>
 <footer class="site-footer">
   <div class="bar">
@@ -62,6 +66,36 @@ btn.addEventListener("click", async () => {
     out.textContent = "失敗：無法連線到後端（" + e.message + "）。請確認網址正確、Worker 已部署，且網路正常。";
   } finally {
     btn.disabled = false;
+  }
+});
+
+const geminiBtn = document.getElementById("geminiBtn");
+const geminiOut = document.getElementById("geminiOut");
+
+geminiBtn.addEventListener("click", async () => {
+  geminiBtn.disabled = true;
+  geminiOut.className = "";
+  geminiOut.textContent = "等待 Gemini 回覆…";
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "ask", question: "請用一句話自我介紹" })
+    });
+    let data = null;
+    try { data = await res.json(); } catch (e) {}
+    if (res.ok && data && data.ok) {
+      geminiOut.textContent = data.answer;
+    } else {
+      geminiOut.className = "err";
+      const msg = data && data.error ? data.error : "後端回傳了無法辨識的內容。";
+      geminiOut.textContent = "失敗：HTTP " + res.status + "\n" + msg;
+    }
+  } catch (e) {
+    geminiOut.className = "err";
+    geminiOut.textContent = "失敗：無法連線到後端（" + e.message + "）。請確認網址正確、Worker 已部署，且網路正常。";
+  } finally {
+    geminiBtn.disabled = false;
   }
 });
 </script>
