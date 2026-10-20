@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>問答｜年齡與憂鬱、焦慮、壓力的關係</title>
 <link rel="stylesheet" href="style.css">
+<style>
+  .test-box{margin-top:18px}
+  .test-box button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:8px;padding:8px 16px;cursor:pointer}
+  .test-box button:disabled{opacity:.6;cursor:wait}
+  .test-box pre{margin:12px 0 0;padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--card);white-space:pre-wrap;word-break:break-word;min-height:1.5em}
+  .test-box pre.err{border-color:#b42318;color:#b42318}
+</style>
 </head>
 <body>
 <header class="site-header">
@@ -16,6 +23,10 @@
 <main class="wrap">
   <h1>問答</h1>
   <div class="soon"><b>即將推出</b><span>此區塊預留給問答功能，目前尚未開放。</span></div>
+  <div class="test-box">
+    <button type="button" id="testBtn">測試連線</button>
+    <pre id="testOut" aria-live="polite"></pre>
+  </div>
 </main>
 <footer class="site-footer">
   <div class="bar">
@@ -24,5 +35,35 @@
   </div>
 </footer>
 
+<script>
+const API_URL = "https://dass.d84121051.workers.dev/";
+const btn = document.getElementById("testBtn");
+const out = document.getElementById("testOut");
+
+btn.addEventListener("click", async () => {
+  btn.disabled = true;
+  out.className = "";
+  out.textContent = "連線中…";
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "test" })
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      out.className = "err";
+      out.textContent = "失敗：HTTP " + res.status + "\n" + text;
+    } else {
+      out.textContent = "HTTP " + res.status + "\n" + text;
+    }
+  } catch (e) {
+    out.className = "err";
+    out.textContent = "失敗：無法連線到後端（" + e.message + "）。請確認網址正確、Worker 已部署，且網路正常。";
+  } finally {
+    btn.disabled = false;
+  }
+});
+</script>
 </body>
 </html>
